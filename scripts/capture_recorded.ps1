@@ -15,7 +15,7 @@ param(
     [int]$Inner = 128,
     [int]$Device = 0,
     [string]$RuntimeProfileId = "CUDA-RECORDED-v0.1",
-    [string]$BenchmarkProfileId = "CUDA-MICROBENCH-v0.1"
+    [string]$BenchmarkProfileId = "CUDA-MICROBENCH-v0.2"
 )
 
 $ErrorActionPreference = "Stop"

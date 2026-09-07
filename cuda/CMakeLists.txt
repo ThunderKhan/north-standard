@@ -7,7 +7,7 @@ endif()
 
 enable_language(CUDA)
 
-add_executable(north-standard-cuda-probe src/probe.cu)
+add_executable(north-standard-cuda-probe src/probe_v2.cu)
 set_target_properties(
     north-standard-cuda-probe
     PROPERTIES
