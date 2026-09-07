@@ -6,33 +6,53 @@ North Standard is a Monad Metropolis 2026 research/engineering project investiga
 
 > Given incomplete, sampled, and potentially adversarial evidence, how reliably can a verifier distinguish compliant GPU service from breached service strongly enough to drive deterministic financial settlement?
 
-The current repository is deliberately **not** a GPU marketplace. The first milestone is the verification boundary itself.
+The current repository is deliberately **not** a GPU marketplace. The verifier and its measurable behavior are the technical center.
 
-## Current v0.1 slice
+## Current architecture
+
+North Standard now uses two verifier implementations with distinct roles:
+
+- **C++20 core** — settlement-critical claim appraisal and decision semantics;
+- **Python reference** — simulator, research orchestration, experiment tooling, and an executable semantic reference.
+
+CI runs the same shared scenarios through both implementations and fails if their decision or reason codes diverge.
 
 ```text
 Compute contract
       -> contract-bound evidence
-      -> deterministic verifier
+      -> C++ verifier core
       -> ACCEPT | REJECT | INCONCLUSIVE
+
+                   ^
+                   |
+        differential parity
+                   |
+            Python reference
 ```
 
-Implemented in Step 1:
+The JSON Schemas remain the language-neutral protocol boundary. The current C++ milestone mirrors the typed verifier semantics; canonical JSON/hash parity and signed settlement authorization are the next boundary-hardening step.
+
+## Implemented
 
 - versioned compute-contract, evidence, and verifier-result schemas;
-- deterministic canonical serialization + SHA-256 commitments;
+- Python canonical serialization + SHA-256 commitments;
+- C++20 typed verifier core with no third-party runtime dependencies;
 - contract/session binding checks;
 - runtime, availability, and performance claim appraisal;
 - explicit `INCONCLUSIVE` behavior for ambiguous/missing evidence;
-- synthetic simulator with four judge-facing scenarios;
-- replay/duplicate protection in the executable verifier path;
-- dependency-free unit tests.
+- replay and duplicate-evidence protection;
+- four synthetic judge-facing scenarios in both implementations;
+- native C++ tests;
+- Python unit tests;
+- Python/C++ differential tests in CI.
 
 Not implemented yet:
 
 - Monad settlement contract;
-- result signing / verifier key management;
+- settlement authorization signing / verifier key management;
+- canonical JSON + hash parity in the C++ core;
 - NVIDIA/H100 attestation adapter;
+- C++/CUDA challenge runner;
 - recorded-real GPU traces;
 - adversarial experiment sweeps and FAR/FRR/IR measurements;
 - production-calibrated thresholds;
@@ -69,28 +89,34 @@ all mandatory affirming      -> ACCEPT
 
 `INCONCLUSIVE` is first-class. Verifier failure or ambiguous evidence must not silently become provider success or provider fault.
 
-## Run locally
+## Build and test
 
-Requires Python 3.11+ and no runtime dependencies.
+### Python reference
+
+Requires Python 3.11+.
 
 ```bash
 python -m pip install -e .
 python -m unittest discover -s tests -v
 ```
 
-Run a single scenario:
+### C++20 core
+
+Requires CMake 3.20+ and a C++20 compiler.
 
 ```bash
-north-standard simulate healthy_service
-north-standard simulate replayed_evidence
-north-standard simulate constant_throttle
-north-standard simulate ambiguous_network_failure
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON
+cmake --build build --parallel
+ctest --test-dir build --output-on-failure
 ```
 
-Or all four:
+Run a native scenario:
 
 ```bash
-python examples/run_vertical_slice.py
+./build/cpp/north-standard-cpp simulate healthy_service
+./build/cpp/north-standard-cpp simulate replayed_evidence
+./build/cpp/north-standard-cpp simulate constant_throttle
+./build/cpp/north-standard-cpp simulate ambiguous_network_failure
 ```
 
 Expected high-level decisions:
@@ -105,14 +131,16 @@ ambiguous_network_failure    -> INCONCLUSIVE
 ## Repository layout
 
 ```text
-schemas/                  JSON wire-format schemas
-src/north_standard/       verifier + simulator implementation
-tests/                    deterministic unit tests
-examples/                 executable vertical-slice examples
-docs/                     architecture and research-facing docs
-contracts/                reserved for Monad settlement milestone
-experiments/              reserved for adversarial evaluation harness
-app/                      reserved for the product console
+CMakeLists.txt              top-level native build
+cpp/                        C++20 verifier core + scenarios + tests
+schemas/                    JSON wire-format schemas
+src/north_standard/         Python reference verifier + simulator
+tests/                      Python + cross-language differential tests
+examples/                   executable vertical-slice examples
+docs/                       architecture and research-facing docs
+contracts/                  reserved for Monad settlement milestone
+experiments/                reserved for adversarial evaluation harness
+app/                        reserved for the product console
 ```
 
 See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for the current design boundary.

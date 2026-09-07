@@ -13,10 +13,24 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - name: Install package
+
+      - name: Install Python reference package
         run: python -m pip install -e .
-      - name: Run unit tests
+
+      - name: Configure C++ verifier
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON
+
+      - name: Build C++ verifier
+        run: cmake --build build --parallel 2
+
+      - name: Run C++ tests
+        run: ctest --test-dir build --output-on-failure
+
+      - name: Run Python and differential tests
+        env:
+          NORTH_STANDARD_CPP_CLI: build/cpp/north-standard-cpp
         run: python -m unittest discover -s tests -v
