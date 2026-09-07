@@ -10,6 +10,7 @@ interface Vm {
     function warp(uint256 newTimestamp) external;
     function sign(uint256 privateKey, bytes32 digest) external returns (uint8 v, bytes32 r, bytes32 s);
     function expectRevert(bytes4 revertData) external;
+    function expectRevert(bytes calldata revertData) external;
 }
 
 contract NorthStandardSettlementTest {
@@ -140,7 +141,9 @@ contract NorthStandardSettlementTest {
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(ATTACKER_KEY, digest);
         bytes memory signature = abi.encodePacked(r, s, v);
 
-        vm.expectRevert(NorthStandardSettlement.UnauthorizedVerifier.selector);
+        vm.expectRevert(
+            abi.encodeWithSelector(NorthStandardSettlement.UnauthorizedVerifier.selector, attacker)
+        );
         settlement.submitVerifierResult(authorization, signature);
     }
 
@@ -150,9 +153,10 @@ contract NorthStandardSettlementTest {
             5
         );
         authorization.verifierPolicyHash = sha256(bytes("VERIFIER-v9"));
+        bytes memory signature = _signRaw(VERIFIER_KEY, settlement.authorizationDigest(authorization));
 
         vm.expectRevert(NorthStandardSettlement.AuthorizationFieldMismatch.selector);
-        settlement.submitVerifierResult(authorization, _signRaw(VERIFIER_KEY, settlement.authorizationDigest(authorization)));
+        settlement.submitVerifierResult(authorization, signature);
     }
 
     function testExpiredAuthorizationCannotSettle() public {
@@ -161,9 +165,10 @@ contract NorthStandardSettlementTest {
             6
         );
         authorization.validUntil = uint64(block.timestamp - 1);
+        bytes memory signature = _signVerifier(authorization);
 
         vm.expectRevert(NorthStandardSettlement.AuthorizationExpired.selector);
-        settlement.submitVerifierResult(authorization, _signVerifier(authorization));
+        settlement.submitVerifierResult(authorization, signature);
     }
 
     function testReplayFailsAfterResultConsumed() public {
