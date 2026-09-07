@@ -104,8 +104,9 @@ class RecordedBaselineTests(unittest.TestCase):
         self.assertEqual(report["sample_count"], 9)
         compute = report["metrics"]["compute_gflops"]
         self.assertAlmostEqual(compute["all_samples"]["median"], 100.0)
-        self.assertAlmostEqual(compute["all_samples"]["mad"], 2.0)
-        self.assertAlmostEqual(compute["all_samples"]["relative_mad"], 0.02)
+        # Absolute deviations around 100 are 2,0,2,1,1,3,3,1,1; median = 1.
+        self.assertAlmostEqual(compute["all_samples"]["mad"], 1.0)
+        self.assertAlmostEqual(compute["all_samples"]["relative_mad"], 0.01)
         self.assertAlmostEqual(
             compute["run_to_run"]["maximum_relative_deviation_from_median"],
             0.01,
