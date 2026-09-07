@@ -93,7 +93,8 @@ Private keys are intentionally **not** handled by the verifier core. The reposit
 - compute + memory normalized challenge scores replayed through the existing verifier;
 - recorded-campaign manifest with ground truth kept outside verifier-visible inputs;
 - FAR/FRR/INCONCLUSIVE + Wilson-interval reporting for recorded campaigns;
-- Windows PowerShell capture helper for repeated condition traces.
+- Windows PowerShell capture helper for repeated condition traces;
+- separate CUDA compile-only CI gate using an NVIDIA CUDA development image; the gate validates compilation but intentionally does not claim GPU runtime execution.
 
 **Important:** the Mode R tooling is implemented, but no real RTX 3050 measurement files or empirical Mode R results are claimed in the repository yet.
 
@@ -200,9 +201,12 @@ Requires a CUDA Toolkit with `nvcc`.
 ```bash
 cmake -S . -B build-cuda \
   -DNORTH_STANDARD_BUILD_CUDA_PROBE=ON \
-  -DBUILD_TESTING=OFF
+  -DBUILD_TESTING=OFF \
+  -DCMAKE_CUDA_ARCHITECTURES=86
 cmake --build build-cuda --parallel
 ```
+
+`86` targets the Ampere compute capability used by the intended RTX 3050 capture machine. The separate `cuda-compile` workflow checks that this probe compiles in an NVIDIA CUDA 12.8.1 development image; it does not run the binary because GitHub-hosted CI has no project GPU attached.
 
 See [`docs/RECORDED_REAL.md`](docs/RECORDED_REAL.md) for the RTX 3050 capture/calibration/campaign procedure.
 
@@ -246,7 +250,7 @@ src/north_standard/         Python reference, authorization, experiments
 scripts/                    cross-layer tooling + Windows capture helper
 tests/                      Python + cross-language differential tests
 examples/                   executable examples
-.github/workflows/          CI + guarded Monad Testnet deployment
+.github/workflows/          CI + CUDA compile gate + guarded Monad deployment
 docs/                       architecture and protocol notes
 experiments/                synthetic + recorded evaluation runners/workspace
 app/                        reserved for the product console
@@ -257,6 +261,8 @@ app/                        reserved for the product console
 The simulator's current performance floor is **experiment-defined**, not a measured production SLA threshold. Synthetic evidence and synthetic adversaries validate decision logic and evaluation mechanics; they are not evidence of live H100 verification or real-provider attack detection.
 
 Mode R tooling records physical measurements from accessible hardware, but local software collection is not hardware-rooted attestation. RTX 3050 behavior must not be represented as H100/H200/B200 behavior. Until actual trace files are collected, the repository makes no empirical Mode R performance claim.
+
+A successful CUDA compile-only CI job proves only that the collector source builds for the requested CUDA architecture in that toolchain. It does not prove that the collector executed on an RTX 3050 or that any measured value exists.
 
 Likewise, `rejectPenaltyBps` is a configurable demonstration/research settlement parameter, not a claim about economically optimal production collateralization.
 

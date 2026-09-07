@@ -6,7 +6,7 @@ venv/
 .pytest_cache/
 .coverage
 htmlcov/
-build/
+build*/
 dist/
 .DS_Store
 .idea/

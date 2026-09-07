@@ -1,0 +1,41 @@
+name: cuda-compile
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'cuda/**'
+      - 'CMakeLists.txt'
+      - '.github/workflows/cuda-compile.yml'
+  pull_request:
+    paths:
+      - 'cuda/**'
+      - 'CMakeLists.txt'
+      - '.github/workflows/cuda-compile.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  compile:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Compile CUDA probe without a GPU
+        run: |
+          docker run --rm \
+            -v "$GITHUB_WORKSPACE:/workspace" \
+            -w /workspace \
+            nvidia/cuda:12.8.1-devel-ubuntu24.04 \
+            bash -lc '
+              set -euxo pipefail
+              apt-get update
+              DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends cmake g++
+              cmake -S . -B build-cuda-ci \
+                -DNORTH_STANDARD_BUILD_CUDA_PROBE=ON \
+                -DBUILD_TESTING=OFF \
+                -DCMAKE_BUILD_TYPE=Release \
+                -DCMAKE_CUDA_ARCHITECTURES=86
+              cmake --build build-cuda-ci --target north-standard-cuda-probe --parallel 2
+            '
