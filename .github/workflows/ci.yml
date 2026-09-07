@@ -35,6 +35,13 @@ jobs:
           NORTH_STANDARD_CPP_CLI: build/cpp/north-standard-cpp
         run: python -m unittest discover -s tests -v
 
+      - name: Run synthetic experiment smoke matrix
+        run: |
+          python experiments/run_synthetic.py \
+            --trials-per-scenario 4 \
+            --base-seed 20260907 \
+            --output-dir /tmp/north-standard-synthetic-smoke
+
       - name: Generate verifier-to-settlement fixtures
         env:
           NORTH_STANDARD_CPP_CLI: build/cpp/north-standard-cpp
