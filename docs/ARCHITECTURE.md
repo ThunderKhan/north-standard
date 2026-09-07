@@ -1,89 +1,182 @@
 # North Standard — v0.1 Architecture
 
-North Standard is an experimental verifier for contract-bound physical GPU service. The market is an application shell; the verifier and its measurable behavior are the technical center.
+North Standard is an experimental verification-and-settlement system for contract-bound physical GPU service. The market is an application shell; the measurable verifier is the technical center.
 
-## Separation of concerns
+## System boundary
 
 ```text
 Compute Contract
       |
       v
-Contract-bound session
+Contract-bound service session
       |
-      +-- session binding
+      +-- session binding evidence
       +-- runtime evidence
       +-- telemetry
-      +-- randomized challenge evidence
-      +-- independent probes
+      +-- challenge evidence
+      +-- external probes
       |
       v
 Evidence Bundle
       |
-      v
-C++ verifier core <---- differential parity ---- Python reference
-      |
-      +-- claim results
-      |     session.binding
-      |     service.runtime
-      |     service.availability
-      |     service.performance
-      |
-      v
-ACCEPT | REJECT | INCONCLUSIVE
-      |
-      v
-Signed/result commitment (next milestone)
-      |
-      v
-Monad settlement policy (next milestone)
+      +-----------------------------+
+      |                             |
+      v                             v
+C++20 verifier core <---- parity ---- Python reference / experiment control plane
+      |                             |
+      | canonical JSON + SHA-256    | synthetic/recorded/live provenance
+      | claim appraisal             | ground-truth labels stay outside verifier
+      | decision semantics          | baselines / ablations / metrics
+      +-------------+---------------+
+                    |
+                    v
+          settlement-commitment/0.1
+                    |
+                    v
+          EIP-712 authorization data
+                    |
+             external signer
+                    |
+                    v
+          SettlementAuthorization
+                    |
+                    v
+       NorthStandardSettlement.sol
+                    |
+       +------------+-------------+
+       |            |             |
+     ACCEPT       REJECT     INCONCLUSIVE
+       |            |             |
+ provider paid   refund +         HELD
+                 configured       funds remain
+                 demo penalty     locked
 ```
 
-The verifier appraises evidence. It does **not** decide how much money moves. Financial consequences belong in a separate settlement policy.
+Raw telemetry never directly moves funds. The verifier appraises evidence; settlement policy maps an authorized verifier result to financial state.
 
-## Why two implementations?
+## C++20 verifier core
 
-The Python verifier remains the fast-moving research/reference implementation. The C++20 core is the candidate settlement-critical implementation because it gives tighter control over types, native execution, future GPU/CUDA integration, and high-volume experiment replay.
+The C++ core currently owns settlement-critical deterministic mechanics:
 
-Neither implementation is allowed to silently become the source of different semantics. Shared scenarios are executed through both in CI. Decision and reason-code disagreement is a test failure.
-
-This is not yet full wire-level equivalence. The current cross-language invariant covers typed verifier semantics. Canonical JSON parsing/serialization and SHA-256 commitment parity are intentionally deferred to the next boundary-hardening milestone.
-
-## Current claims
-
-The v0.1 executable slice requires four claims:
-
-- `session.binding`
-- `service.runtime`
-- `service.availability`
-- `service.performance`
-
-Hardware identity is intentionally deferred until a real hardware-attestation adapter exists. Location, exclusivity, and network SLA claims are not implied.
-
-## C++ core boundary
-
-The C++ core currently owns:
-
-- typed contract/evidence structures;
+- schema-aware typed contract/evidence parsing for the v0.1 wire boundary;
+- canonical JSON representation;
+- SHA-256 contract/evidence/settlement commitments;
+- preservation of uninterpreted but commitment-relevant payload fields;
 - binding/replay appraisal;
 - runtime appraisal;
 - availability appraisal;
 - performance appraisal;
-- fatal duplicate detection;
-- overall `ACCEPT | REJECT | INCONCLUSIVE` semantics;
-- native scenario execution.
+- duplicate/fatal evidence validation;
+- `ACCEPT | REJECT | INCONCLUSIVE` semantics.
 
-It intentionally does **not** yet own:
+Python contains an independent executable reference. CI sends shared wire objects through both implementations and fails on mismatch in contract hash, evidence root, settlement commitment, decision, or reason codes.
 
-- JSON Schema validation;
-- canonical JSON serialization;
-- evidence-bundle hashing;
-- verifier-result signing;
-- settlement transaction submission;
-- GPU/CUDA challenge execution.
+## Settlement-critical commitment
 
-Those boundaries should be added deliberately rather than hidden behind fake completeness.
+The full verifier result may contain implementation/audit metadata. Financial authorization commits to a smaller language-neutral semantic payload:
 
-## Conservative decision policy
+```text
+settlement-commitment/0.1
+  contract_id
+  session_id
+  verifier_policy_id
+  evidence_bundle_root
+  claims { state, reason_codes }
+  overall { decision, reason_codes }
+```
+
+This permits Python and C++ to retain different implementation metadata while requiring exact agreement about the financial statement.
+
+## Signing boundary
+
+The verifier does not own private keys. Python builds an unsigned EIP-712 `SettlementAuthorization` containing:
+
+- agreement ID;
+- canonical contract hash;
+- settlement commitment;
+- evidence bundle root;
+- verifier-policy hash;
+- settlement-policy hash;
+- verifier-set ID;
+- decision;
+- issuance/expiry times;
+- nonce.
+
+A wallet, HSM, or secret-managed signer signs the typed data. The Solidity contract recovers and validates the authorized verifier address.
+
+## Solidity settlement
+
+`NorthStandardSettlement.sol` implements a native-token demonstration state machine:
+
+```text
+buyer escrow + provider collateral
+              |
+              v
+          ACTIVE
+              |
+      authorized result
+      /       |        \
+ ACCEPT     REJECT   INCONCLUSIVE
+   |           |          |
+SETTLED     SETTLED      HELD
+                          |
+                 mutual resolution
+                    or timeout
+                          |
+                       SETTLED
+```
+
+Important invariants:
+
+- one agreement consumes at most one verifier result;
+- result/policy/contract/verifier-set hashes must match the agreement;
+- stale or unauthorized signatures cannot settle;
+- verifier outage moves to `HELD`, not automatic provider rejection;
+- `INCONCLUSIVE` does not silently become either party's victory;
+- settlement credits pull-payment balances before withdrawal;
+- raw evidence has no onchain path that directly changes financial state.
+
+## Evaluation architecture
+
+Ground truth is deliberately separated from verifier input.
+
+```text
+hidden experiment label
+(COMPLIANT / BREACH)
+        |
+        +---- experiment harness only
+        |
+service/evidence generator
+        |
+        v
+same verifier used by settlement
+        |
+        v
+ACCEPT / REJECT / INCONCLUSIVE
+        |
+        v
+compare with hidden label
+        |
+        +-- FAR
+        +-- FRR
+        +-- INCONCLUSIVE rate
+        +-- conditioned abstention
+```
+
+Current research tooling includes:
+
+- seeded synthetic trials;
+- evidence-subset baselines;
+- verifier ablations;
+- challenge-aware cheating;
+- predictable vs hidden challenge schedules;
+- disjoint calibration/held-out seeds;
+- Wilson confidence intervals;
+- challenge-parameter sensitivity sweeps.
+
+These facilities are reproducibility infrastructure. Synthetic results remain explicitly non-publication-ready.
+
+## Conservative verifier policy
 
 ```text
 mandatory CONTRADICTING -> REJECT
@@ -95,31 +188,29 @@ otherwise                -> INCONCLUSIVE
 
 Missing evidence never silently becomes success.
 
-## Shared v0.1 scenarios
+## Current v0.1 claims
 
-| Scenario | Intended output | Purpose |
-|---|---|---|
-| `healthy_service` | `ACCEPT` | happy path |
-| `replayed_evidence` | `REJECT` | contract/session binding |
-| `constant_throttle` | `REJECT` | performance breach path |
-| `ambiguous_network_failure` | `INCONCLUSIVE` | preserve uncertainty |
+- `session.binding`
+- `service.runtime`
+- `service.availability`
+- `service.performance`
 
-## Next architectural milestone
+Hardware identity remains deferred until a real hardware-attestation adapter exists. Location and exclusivity are not implied.
 
-Before Solidity consumes verifier output, harden the language boundary:
+## Current execution modes
 
-1. canonical schema-backed verifier input in C++;
-2. C++/Python canonical commitment parity;
-3. settlement authorization object;
-4. verifier signature/key policy;
-5. Monad smart contract consuming only the compact authorized result.
+- **S — SYNTHETIC:** generated evidence for deterministic adversarial experiments;
+- **R — RECORDED_REAL:** planned accessible-hardware traces, beginning with RTX 3050;
+- **L — LIVE_REAL:** optional future remote-provider evidence.
 
-Then:
+Mode S establishes experiment mechanics and catches protocol/decision bugs. It must not be described as live GPU verification.
 
-```text
-ACCEPT       -> provider payment path
-REJECT       -> buyer refund / configured penalty path
-INCONCLUSIVE -> HELD path
-```
+## Next architectural milestones
 
-Raw telemetry must never directly move funds.
+1. record real challenge/telemetry traces on accessible RTX 3050 hardware;
+2. add the optional C++/CUDA challenge runner and measure runtime overhead;
+3. broaden provider attacks (burst throttling, contention, conflicting telemetry/probes);
+4. run frozen held-out baseline/ablation evaluation with retained raw outputs;
+5. broadcast and independently verify the settlement contract on Monad Testnet once a dedicated funded testnet signer is configured;
+6. add real hardware-attestation adapters when access permits;
+7. build the product console only after the evidence/verifier/settlement path remains stable.

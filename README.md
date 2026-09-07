@@ -57,8 +57,8 @@ Private keys are intentionally **not** handled by the verifier core. The reposit
 ### Settlement boundary
 
 - EIP-712 `SettlementAuthorization` admission format;
-- signer-facing Python package that binds the authorization to the exact C++/Python hashes;
-- `NorthStandardSettlement.sol` escrow + provider-collateral state machine;
+- signer-facing Python package that binds authorization to the exact C++/Python hashes;
+- `NorthStandardSettlement.sol` native-token escrow + provider-collateral state machine;
 - authorized secp256k1 verifier signer recovery with low-s enforcement;
 - authorization validity windows and nonce/replay protection;
 - `ACCEPT` → provider payment path;
@@ -68,19 +68,33 @@ Private keys are intentionally **not** handled by the verifier core. The reposit
 - mutually signed HELD resolution;
 - neutral timeout unwind;
 - pull-payment withdrawals;
-- Foundry test suite in CI;
+- verifier-generated Python/C++ hashes consumed by Foundry end-to-end settlement tests;
 - guarded, manually triggered Monad Testnet deployment workflow.
 
-Not implemented yet:
+### Evaluation boundary
+
+- seeded synthetic trial generator with ground truth kept outside the verifier;
+- explicit FAR, FRR, and INCONCLUSIVE-rate accounting;
+- raw JSONL trial records plus derived summaries;
+- provider-self-report, challenge-only, and external-probe-only baselines;
+- session-binding, telemetry, external-probe, and abstention ablations;
+- challenge-aware cheating model comparing predictable and hidden schedules;
+- disjoint calibration/held-out seed namespaces;
+- 95% Wilson confidence intervals for finite-sample uncertainty;
+- sensitivity sweeps over challenge count, attacker honesty window, and jitter width;
+- all experiment summaries explicitly marked non-publication-ready while they remain synthetic.
+
+## Not implemented yet
 
 - a real Monad Testnet deployment transaction (requires a funded dedicated testnet key);
 - production verifier key management/HSM integration;
 - NVIDIA/H100 attestation adapter;
 - C++/CUDA challenge runner;
-- recorded-real GPU traces;
-- adversarial experiment sweeps and FAR/FRR/IR measurements;
-- production-calibrated thresholds;
-- frontend/market shell.
+- recorded-real RTX 3050 GPU traces;
+- measured GPU challenge runtime/overhead;
+- broader final attack suite and publication-grade evaluation;
+- production-calibrated performance/SLA thresholds;
+- frontend/product console.
 
 ## Decisions
 
@@ -115,7 +129,7 @@ all mandatory affirming      -> ACCEPT
 
 ## Build and test
 
-### Python reference
+### Python reference and experiments
 
 Requires Python 3.11+.
 
@@ -129,6 +143,18 @@ Generate an unsigned EIP-712 signing package:
 ```bash
 python examples/build_authorization.py
 ```
+
+Run the current research harnesses:
+
+```bash
+python experiments/run_synthetic.py --trials-per-scenario 25
+python experiments/compare_evaluators.py --trials-per-scenario 25
+python experiments/challenge_aware.py --trials-per-schedule 100
+python experiments/run_heldout.py --heldout-trials-per-scenario 200
+python experiments/challenge_sensitivity.py --trials-per-cell 100
+```
+
+See [`experiments/README.md`](experiments/README.md) before interpreting any generated number.
 
 ### C++20 verifier
 
@@ -163,11 +189,13 @@ Requires Foundry.
 forge test -vvv
 ```
 
-See [`docs/SETTLEMENT_CONTRACT.md`](docs/SETTLEMENT_CONTRACT.md) for the admission and settlement policy.
+The current Foundry suite includes direct settlement-policy tests plus verifier-to-settlement end-to-end fixtures generated from the actual Python/C++ verifier path.
+
+See [`docs/SETTLEMENT_CONTRACT.md`](docs/SETTLEMENT_CONTRACT.md) for admission and settlement semantics.
 
 ## Monad Testnet deployment
 
-A manual workflow lives at `.github/workflows/deploy-monad-testnet.yml`. It checks the RPC's chain ID is `10143` before broadcasting.
+A manual workflow lives at `.github/workflows/deploy-monad-testnet.yml`. It verifies the RPC chain ID is `10143` before broadcasting.
 
 Configure the protected `monad-testnet` GitHub environment with:
 
@@ -188,22 +216,23 @@ cpp/                        C++20 parser/verifier/hash core + tests
 contracts/                  Solidity settlement, Foundry tests, deploy script
 schemas/                    JSON wire-format schemas
 fixtures/                   shared cross-language parity vectors
-src/north_standard/         Python reference + authorization builder
+src/north_standard/         Python reference, authorization, experiments
+scripts/                    cross-layer generated-fixture tooling
 tests/                      Python + cross-language differential tests
 examples/                   executable examples
 .github/workflows/          CI + guarded Monad Testnet deployment
 docs/                       architecture and protocol notes
-experiments/                adversarial evaluation workspace
+experiments/                adversarial evaluation runners/results workspace
 app/                        reserved for the product console
 ```
 
 ## Research honesty
 
-The simulator's current performance floor is **experiment-defined**, not a measured production SLA threshold. Synthetic evidence validates decision logic and adversarial experiment mechanics; it is not evidence of live H100 verification.
+The simulator's current performance floor is **experiment-defined**, not a measured production SLA threshold. Synthetic evidence and synthetic adversaries validate decision logic and evaluation mechanics; they are not evidence of live H100 verification or real-provider attack detection.
 
 Likewise, `rejectPenaltyBps` is a configurable demonstration/research settlement parameter, not a claim about economically optimal production collateralization.
 
-Future results will explicitly label evidence origin as synthetic, recorded accessible hardware, or live remote hardware.
+Experiment outputs are marked with provenance/status metadata. Challenge counts are scheduling proxies until real GPU challenge runtime is measured. Future results will continue to distinguish `SYNTHETIC`, recorded accessible hardware, and live remote hardware.
 
 ## License
 
