@@ -2,18 +2,21 @@
 
 This directory is the experimental control plane for North Standard's verifier research.
 
-## Current milestone: synthetic smoke harness
+## Current milestone: synthetic smoke harnesses
 
-The current harness is intentionally **not a benchmark result**. It proves that the repository can:
+The current harnesses are intentionally **not benchmark results**. They prove that the repository can:
 
 1. generate seeded evidence without exposing ground truth to the verifier;
 2. retain explicit `COMPLIANT` / `BREACH` labels only in the experiment harness;
 3. run the same deterministic verifier used by the settlement path;
 4. persist per-trial raw records;
 5. calculate FAR, FRR, and INCONCLUSIVE rates with explicit denominators;
-6. compare the full verifier against explicit evidence-subset baselines and verifier ablations.
+6. compare the full verifier against explicit evidence-subset baselines and verifier ablations;
+7. model a challenge-aware cheating provider under predictable versus hidden challenge schedules.
 
-Current synthetic families:
+## General synthetic matrix
+
+Current families:
 
 | Case | Hidden ground truth | Purpose |
 | --- | --- | --- |
@@ -26,24 +29,13 @@ Current synthetic families:
 | `provider_outage` | BREACH | corroborated provider-side availability failure |
 | `telemetry_gap` | COMPLIANT | required-evidence missingness / abstention |
 
-Run the full-verifier smoke matrix:
+Run:
 
 ```bash
 python -m pip install -e .
-python experiments/run_synthetic.py \
-  --trials-per-scenario 25 \
-  --base-seed 20260907
+python experiments/run_synthetic.py --trials-per-scenario 25 --base-seed 20260907
+python experiments/compare_evaluators.py --trials-per-scenario 25 --base-seed 20260907
 ```
-
-Compare evaluators:
-
-```bash
-python experiments/compare_evaluators.py \
-  --trials-per-scenario 25 \
-  --base-seed 20260907
-```
-
-Outputs are written under `experiments/results/raw/` and ignored by git.
 
 ## Implemented comparators
 
@@ -60,6 +52,32 @@ Outputs are written under `experiments/results/raw/` and ignored by git.
 
 The B0/B3/B5 labels refer specifically to these implemented comparators. They do not imply the full production behavior of any external system.
 
+## Challenge-aware cheating
+
+The adversary throttles most of the delivery window but restores an honest score inside a small window around challenge times it can predict.
+
+Schedules:
+
+| Schedule | Attacker knowledge |
+| --- | --- |
+| `fixed_periodic` | exact periodic challenge times |
+| `public_jitter` | exact jittered times because the schedule/seed is public |
+| `hidden_jitter` | interval is known but jitter draw is hidden |
+| `hidden_uniform` | challenge times are drawn uniformly from a hidden seed |
+
+Run:
+
+```bash
+python experiments/challenge_aware.py \
+  --trials-per-schedule 100 \
+  --base-seed 20260907 \
+  --challenge-count 6
+```
+
+The primary smoke metric here is **false-accept rate under known cheating**. `REJECT` is counted as detected; `INCONCLUSIVE` remains separate rather than being silently counted as success.
+
+Challenge count and density are scheduling proxies only. They are **not measured GPU overhead**. Actual challenge-runtime overhead will come from recorded-real hardware work later.
+
 ## Metric definitions
 
 ```text
@@ -74,7 +92,7 @@ Any numbers produced by these smoke harnesses are **synthetic pipeline diagnosti
 
 - a frozen held-out attack suite;
 - confidence intervals and exact sample counts;
-- randomized/fixed challenge timing comparison;
-- challenge-overhead measurements;
+- sensitivity sweeps over challenge frequency and attacker honesty windows;
+- measured challenge runtime/overhead;
 - recorded-real RTX 3050 traces;
 - limitations and negative-result retention.

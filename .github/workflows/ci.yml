@@ -49,6 +49,14 @@ jobs:
             --base-seed 20260907 \
             --output-dir /tmp/north-standard-evaluator-comparison
 
+      - name: Run challenge-aware cheating smoke comparison
+        run: |
+          python experiments/challenge_aware.py \
+            --trials-per-schedule 20 \
+            --base-seed 20260907 \
+            --challenge-count 6 \
+            --output-dir /tmp/north-standard-challenge-aware
+
       - name: Generate verifier-to-settlement fixtures
         env:
           NORTH_STANDARD_CPP_CLI: build/cpp/north-standard-cpp
