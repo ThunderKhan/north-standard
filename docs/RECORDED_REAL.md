@@ -19,7 +19,7 @@ healthy calibration captures
    |
    v
 gpu-calibration/0.1
-   |
+   | device/profile/challenge-bound
    v
 later recorded capture
    |
@@ -30,6 +30,10 @@ normalized challenge evidence
 existing Python/C++ verifier
    |
 ACCEPT | REJECT | INCONCLUSIVE
+   |
+   v
+recorded campaign metrics
+FAR | FRR | IR + Wilson intervals
 ```
 
 The collector uses only the CUDA runtime in v0.1. It records two deliberately simple microbenchmark primitives:
@@ -50,15 +54,15 @@ cmake -S . -B build-cuda \
 cmake --build build-cuda --parallel
 ```
 
-On Windows with a Visual Studio generator, build the generated `north-standard-cuda-probe` target in the usual way.
+On Windows with a Visual Studio generator, the executable will normally appear under the selected configuration directory, for example `build-cuda/cuda/Release/north-standard-cuda-probe.exe` when building Release.
 
 If `nvcc` is not discoverable, install/configure a CUDA Toolkit first. Having an NVIDIA driver alone is not sufficient to compile the probe.
 
 ## Capture a healthy baseline
 
-Use one contract/session pair for captures that belong to the same evaluation window. Start with multiple healthy captures instead of calibrating from one lucky run.
+Start with multiple healthy captures instead of calibrating from one lucky run. Keep the benchmark parameters identical.
 
-Example:
+Single capture example:
 
 ```bash
 ./build-cuda/cuda/north-standard-cuda-probe \
@@ -69,9 +73,22 @@ Example:
   --output experiments/recorded_traces/healthy-01.json
 ```
 
-Repeat for `healthy-02.json`, `healthy-03.json`, etc. Keep the benchmark parameters identical.
+### Windows helper
 
-Build the calibration:
+The repository includes `scripts/capture_recorded.ps1` so a condition can be captured repeatedly without manually creating IDs and filenames.
+
+```powershell
+.\scripts\capture_recorded.ps1 `
+  -ProbePath .\build-cuda\cuda\Release\north-standard-cuda-probe.exe `
+  -OutputDir .\experiments\recorded_traces `
+  -Condition healthy_idle `
+  -GroundTruth COMPLIANT `
+  -Count 5
+```
+
+The helper does **not** create load, throttling, thermal stress, or any other condition. It only records the GPU while you place the machine in the intended experiment state. It also emits a campaign-fragment JSON file; that fragment is experiment metadata, never verifier input.
+
+Build the calibration from the healthy captures:
 
 ```bash
 python experiments/calibrate_recorded.py \
@@ -82,23 +99,32 @@ python experiments/calibrate_recorded.py \
   --output experiments/recorded_traces/rtx3050-calibration.json
 ```
 
-The reference compute and memory values are medians across the explicitly designated healthy captures.
+The reference compute and memory values are medians across the explicitly designated healthy captures. The calibration is also bound to:
+
+- device fingerprint;
+- CUDA runtime profile;
+- benchmark profile;
+- challenge element count;
+- FMA inner-iteration count;
+- warmup count.
+
+A later trace with a different bound challenge shape is rejected before replay.
 
 ## Record evaluation conditions
 
-Record separate sessions for conditions such as:
+Useful conditions include:
 
 - normal/idle system;
 - sustained GPU load/contention;
-- thermal or power-limited behavior that occurs naturally or through legitimate local settings;
-- memory pressure;
+- naturally occurring thermal or power-limited behavior under legitimate local settings;
+- GPU memory pressure;
 - host CPU pressure.
 
 Do not damage hardware, disable safety limits, or use unsafe overclock/undervolt settings for the experiment.
 
-The CUDA probe itself does not claim the cause of a slowdown. Ground-truth condition labels belong in the experiment harness/logbook, outside verifier input.
+The CUDA probe itself does not claim the cause of a slowdown. Ground-truth condition labels belong in the campaign manifest/logbook, outside verifier input.
 
-## Replay through the verifier
+## Replay one capture through the verifier
 
 ```bash
 python experiments/replay_recorded.py \
@@ -117,6 +143,30 @@ score         = min(compute_ratio, memory_ratio)
 ```
 
 Using the minimum makes the score bottleneck-sensitive. This exact aggregation is experiment-defined and should be treated as an ablation candidate, not as production truth.
+
+## Run a recorded-hardware campaign
+
+Copy `experiments/recorded_campaign.example.json` and replace the example paths with actual trace files. The manifest keeps two things outside the verifier:
+
+- `condition`;
+- `ground_truth` (`COMPLIANT` or `BREACH`).
+
+Then run:
+
+```bash
+python experiments/run_recorded_campaign.py \
+  --manifest experiments/recorded_campaign.json \
+  --output-dir experiments/results/recorded/rtx3050-v0.1
+```
+
+The campaign writes:
+
+```text
+recorded_trials.jsonl
+recorded_summary.json
+```
+
+The summary reports FAR, FRR, overall/conditioned INCONCLUSIVE rates, and 95% Wilson confidence intervals. It remains explicitly `publication_ready: false` until the campaign is large enough, conditions are documented, and limitations are reviewed.
 
 ## Trust and provenance
 

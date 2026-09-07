@@ -1,0 +1,35 @@
+{
+  "schema_version": "recorded-campaign/0.1",
+  "campaign_id": "rtx3050-local-example-v0.1",
+  "mode": "RECORDED_REAL",
+  "calibration_path": "recorded_traces/rtx3050-calibration.json",
+  "performance_floor": 0.8,
+  "trials": [
+    {
+      "trial_id": "healthy-idle-01",
+      "condition": "healthy_idle",
+      "ground_truth": "COMPLIANT",
+      "trace_paths": [
+        "recorded_traces/healthy-idle-01.json"
+      ],
+      "notes": [
+        "Example path only; replace with a trace emitted by north-standard-cuda-probe."
+      ]
+    },
+    {
+      "trial_id": "gpu-contention-01",
+      "condition": "gpu_contention",
+      "ground_truth": "BREACH",
+      "trace_paths": [
+        "recorded_traces/gpu-contention-01.json"
+      ],
+      "notes": [
+        "Example path only; the campaign harness does not induce contention itself."
+      ]
+    }
+  ],
+  "notes": [
+    "This template is not an empirical result.",
+    "Ground truth is campaign metadata and is never inserted into verifier-visible evidence."
+  ]
+}

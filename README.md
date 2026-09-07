@@ -11,7 +11,7 @@ The repository is deliberately **not** a GPU marketplace. The verifier and its m
 ## Current architecture
 
 ```text
-physical GPU-service evidence
+synthetic or recorded GPU-service evidence
           |
           v
  C++20 verifier core <----> Python research reference
@@ -84,14 +84,26 @@ Private keys are intentionally **not** handled by the verifier core. The reposit
 - sensitivity sweeps over challenge count, attacker honesty window, and jitter width;
 - all experiment summaries explicitly marked non-publication-ready while they remain synthetic.
 
+### Mode R — recorded accessible hardware tooling
+
+- optional CUDA-runtime microbenchmark collector (`north-standard-cuda-probe`);
+- versioned `gpu-trace/0.1` and `gpu-calibration/0.1` formats;
+- local-software-only provenance and explicit `RECORDED_REAL` labeling;
+- device/profile/challenge-bound healthy calibration;
+- compute + memory normalized challenge scores replayed through the existing verifier;
+- recorded-campaign manifest with ground truth kept outside verifier-visible inputs;
+- FAR/FRR/INCONCLUSIVE + Wilson-interval reporting for recorded campaigns;
+- Windows PowerShell capture helper for repeated condition traces.
+
+**Important:** the Mode R tooling is implemented, but no real RTX 3050 measurement files or empirical Mode R results are claimed in the repository yet.
+
 ## Not implemented yet
 
 - a real Monad Testnet deployment transaction (requires a funded dedicated testnet key);
 - production verifier key management/HSM integration;
 - NVIDIA/H100 attestation adapter;
-- C++/CUDA challenge runner;
-- recorded-real RTX 3050 GPU traces;
-- measured GPU challenge runtime/overhead;
+- actual recorded-real RTX 3050 capture dataset and measured Mode R results;
+- measured GPU challenge runtime/overhead from the physical machine;
 - broader final attack suite and publication-grade evaluation;
 - production-calibrated performance/SLA thresholds;
 - frontend/product console.
@@ -144,7 +156,7 @@ Generate an unsigned EIP-712 signing package:
 python examples/build_authorization.py
 ```
 
-Run the current research harnesses:
+Run the current synthetic research harnesses:
 
 ```bash
 python experiments/run_synthetic.py --trials-per-scenario 25
@@ -181,6 +193,19 @@ Verify shared wire JSON:
 ./build/cpp/north-standard-cpp verify-json < wire.json
 ```
 
+### Optional CUDA Mode R probe
+
+Requires a CUDA Toolkit with `nvcc`.
+
+```bash
+cmake -S . -B build-cuda \
+  -DNORTH_STANDARD_BUILD_CUDA_PROBE=ON \
+  -DBUILD_TESTING=OFF
+cmake --build build-cuda --parallel
+```
+
+See [`docs/RECORDED_REAL.md`](docs/RECORDED_REAL.md) for the RTX 3050 capture/calibration/campaign procedure.
+
 ### Solidity settlement
 
 Requires Foundry.
@@ -211,18 +236,19 @@ No deployment is claimed until the transaction and deployed contract can be inde
 ## Repository layout
 
 ```text
-CMakeLists.txt              top-level native build
+CMakeLists.txt              top-level native build + optional CUDA probe gate
 cpp/                        C++20 parser/verifier/hash core + tests
+cuda/                       optional recorded-real CUDA collector
 contracts/                  Solidity settlement, Foundry tests, deploy script
-schemas/                    JSON wire-format schemas
+schemas/                    JSON wire, GPU-trace, calibration, campaign schemas
 fixtures/                   shared cross-language parity vectors
 src/north_standard/         Python reference, authorization, experiments
-scripts/                    cross-layer generated-fixture tooling
+scripts/                    cross-layer tooling + Windows capture helper
 tests/                      Python + cross-language differential tests
 examples/                   executable examples
 .github/workflows/          CI + guarded Monad Testnet deployment
 docs/                       architecture and protocol notes
-experiments/                adversarial evaluation runners/results workspace
+experiments/                synthetic + recorded evaluation runners/workspace
 app/                        reserved for the product console
 ```
 
@@ -230,9 +256,11 @@ app/                        reserved for the product console
 
 The simulator's current performance floor is **experiment-defined**, not a measured production SLA threshold. Synthetic evidence and synthetic adversaries validate decision logic and evaluation mechanics; they are not evidence of live H100 verification or real-provider attack detection.
 
+Mode R tooling records physical measurements from accessible hardware, but local software collection is not hardware-rooted attestation. RTX 3050 behavior must not be represented as H100/H200/B200 behavior. Until actual trace files are collected, the repository makes no empirical Mode R performance claim.
+
 Likewise, `rejectPenaltyBps` is a configurable demonstration/research settlement parameter, not a claim about economically optimal production collateralization.
 
-Experiment outputs are marked with provenance/status metadata. Challenge counts are scheduling proxies until real GPU challenge runtime is measured. Future results will continue to distinguish `SYNTHETIC`, recorded accessible hardware, and live remote hardware.
+Experiment outputs are marked with provenance/status metadata. Challenge counts are scheduling proxies until real GPU challenge runtime is measured. Results must continue to distinguish `SYNTHETIC`, `RECORDED_REAL`, and future live remote hardware.
 
 ## License
 
