@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://north-standard.dev/schemas/compute-contract/0.1",
+  "title": "North Standard Compute Contract v0.1",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "contract_id",
+    "contract_class_id",
+    "provider_id",
+    "buyer_id",
+    "session_id",
+    "runtime_profile_id",
+    "delivery_start",
+    "duration_seconds",
+    "sla_policy_id",
+    "benchmark_profile_id",
+    "performance_min_score",
+    "verifier_policy_id",
+    "settlement_policy_id",
+    "mandatory_claims",
+    "research_mode"
+  ],
+  "properties": {
+    "schema_version": {"const": "compute-contract/0.1"},
+    "contract_id": {"type": "string", "minLength": 1},
+    "contract_class_id": {"type": "string", "minLength": 1},
+    "provider_id": {"type": "string", "minLength": 1},
+    "buyer_id": {"type": "string", "minLength": 1},
+    "session_id": {"type": "string", "minLength": 1},
+    "runtime_profile_id": {"type": "string", "minLength": 1},
+    "delivery_start": {"type": "integer", "minimum": 0},
+    "duration_seconds": {"type": "integer", "minimum": 1},
+    "sla_policy_id": {"type": "string", "minLength": 1},
+    "benchmark_profile_id": {"type": "string", "minLength": 1},
+    "performance_min_score": {"type": "number", "minimum": 0},
+    "verifier_policy_id": {"type": "string", "minLength": 1},
+    "settlement_policy_id": {"type": "string", "minLength": 1},
+    "evidence_schema_version": {"const": "evidence/0.1"},
+    "mandatory_claims": {
+      "type": "array",
+      "items": {
+        "enum": [
+          "session.binding",
+          "service.runtime",
+          "service.availability",
+          "service.performance"
+        ]
+      },
+      "minItems": 1,
+      "uniqueItems": true
+    },
+    "research_mode": {"type": "boolean"}
+  },
+  "additionalProperties": false
+}

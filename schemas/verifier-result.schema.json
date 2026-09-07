@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://north-standard.dev/schemas/verifier-result/0.1",
+  "title": "North Standard Verifier Result v0.1",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "contract_id",
+    "session_id",
+    "verifier_policy_id",
+    "evidence_bundle_root",
+    "claims",
+    "overall",
+    "audit"
+  ],
+  "properties": {
+    "schema_version": {"const": "verifier-result/0.1"},
+    "contract_id": {"type": "string", "minLength": 1},
+    "session_id": {"type": "string", "minLength": 1},
+    "verifier_policy_id": {"type": "string", "minLength": 1},
+    "evidence_bundle_root": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "claims": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["claim_id", "state", "reason_codes", "evidence_refs", "metrics"],
+        "properties": {
+          "claim_id": {"type": "string"},
+          "state": {
+            "enum": ["AFFIRMING", "CONTRADICTING", "UNKNOWN", "NOT_EVALUATED", "INVALID"]
+          },
+          "reason_codes": {"type": "array", "items": {"type": "string"}},
+          "evidence_refs": {"type": "array", "items": {"type": "string"}},
+          "metrics": {"type": "object"}
+        },
+        "additionalProperties": false
+      }
+    },
+    "overall": {
+      "type": "object",
+      "required": ["decision", "reason_codes"],
+      "properties": {
+        "decision": {"enum": ["ACCEPT", "REJECT", "INCONCLUSIVE"]},
+        "reason_codes": {"type": "array", "items": {"type": "string"}}
+      },
+      "additionalProperties": false
+    },
+    "audit": {
+      "type": "object",
+      "required": ["verifier_build_id", "research_mode"],
+      "properties": {
+        "verifier_build_id": {"type": "string", "minLength": 1},
+        "research_mode": {"type": "boolean"}
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

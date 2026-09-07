@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://north-standard.dev/schemas/evidence/0.1",
+  "title": "North Standard Evidence Record v0.1",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "evidence_id",
+    "evidence_type",
+    "producer_id",
+    "contract_id",
+    "session_id",
+    "observed_at",
+    "received_at",
+    "sequence_number",
+    "payload",
+    "replay_domain",
+    "authentication_valid",
+    "trust_tier"
+  ],
+  "properties": {
+    "schema_version": {"const": "evidence/0.1"},
+    "evidence_id": {"type": "string", "minLength": 1},
+    "evidence_type": {
+      "enum": [
+        "SESSION_BINDING",
+        "RUNTIME_CHECK",
+        "TELEMETRY",
+        "CHALLENGE",
+        "EXTERNAL_PROBE",
+        "HARDWARE_ATTESTATION",
+        "ADMIN_EVENT"
+      ]
+    },
+    "producer_id": {"type": "string", "minLength": 1},
+    "contract_id": {"type": "string", "minLength": 1},
+    "session_id": {"type": "string", "minLength": 1},
+    "observed_at": {"type": "integer", "minimum": 0},
+    "received_at": {"type": "integer", "minimum": 0},
+    "sequence_number": {"type": "integer", "minimum": 0},
+    "payload": {"type": "object"},
+    "nonce": {"type": ["string", "null"]},
+    "replay_domain": {"type": "string", "minLength": 1},
+    "authentication_valid": {"type": "boolean"},
+    "trust_tier": {"enum": ["T0", "T1", "T2", "T3", "T4"]}
+  },
+  "additionalProperties": false
+}

@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "north-standard"
+version = "0.1.0"
+description = "Contract-bound evidence verification for physical GPU-service settlement"
+readme = "README.md"
+requires-python = ">=3.11"
+license = {text = "Apache-2.0"}
+authors = [{name = "Ayan Khan"}]
+dependencies = []
+
+[project.scripts]
+north-standard = "north_standard.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
