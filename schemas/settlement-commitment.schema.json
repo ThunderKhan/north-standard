@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://north-standard.dev/schemas/settlement-commitment.schema.json",
+  "title": "North Standard Settlement Commitment v0.1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "contract_id",
+    "session_id",
+    "verifier_policy_id",
+    "evidence_bundle_root",
+    "claims",
+    "overall"
+  ],
+  "properties": {
+    "schema_version": {"const": "settlement-commitment/0.1"},
+    "contract_id": {"type": "string", "minLength": 1},
+    "session_id": {"type": "string", "minLength": 1},
+    "verifier_policy_id": {"type": "string", "minLength": 1},
+    "evidence_bundle_root": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "claims": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["state", "reason_codes"],
+        "properties": {
+          "state": {
+            "enum": ["AFFIRMING", "CONTRADICTING", "UNKNOWN", "NOT_EVALUATED", "INVALID"]
+          },
+          "reason_codes": {
+            "type": "array",
+            "items": {"type": "string"}
+          }
+        }
+      }
+    },
+    "overall": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["decision", "reason_codes"],
+      "properties": {
+        "decision": {"enum": ["ACCEPT", "REJECT", "INCONCLUSIVE"]},
+        "reason_codes": {
+          "type": "array",
+          "items": {"type": "string"}
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,7 @@
+{"z":1,"a":2,"middle":true}
+[true,false,null,"line\nbreak","quote:\" slash:/ backslash:\\"]
+{"unicode":"Ω नमस्ते GPU","controls":"\b\f\n\r\t\u001f"}
+{"numbers":[0,-0,1.0,-0.0,0.96,1e-6,1e-5,1e15,1e16,93559998984.03429]}
+{"nested":{"b":[3,2,1],"a":{"y":null,"x":"value"}},"empty":{},"array":[]}
+{"contract_id":"contract-001","session_id":"session-001","performance_min_score":0.8,"mandatory_claims":["session.binding","service.runtime","service.availability","service.performance"]}
+{"payload":{"bound":true,"source":"old-session","score":0.56},"nonce":"nonce-α","sequence_number":7}

@@ -1,10 +1,12 @@
 #pragma once
 
+#include "north_standard/json.hpp"
+
 #include <cstdint>
 #include <optional>
 #include <string>
-#include <utility>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 namespace north_standard {
@@ -72,6 +74,10 @@ struct EvidencePayload {
     std::optional<std::string> timeout_attribution;
     std::optional<std::string> result;
     std::optional<std::string> attribution;
+
+    // Preserve schema-valid fields that the verifier does not interpret yet. This is
+    // required for exact cross-language evidence commitments: unknown must not mean lost.
+    JsonValue::Object extra;
 };
 
 struct EvidenceRecord {

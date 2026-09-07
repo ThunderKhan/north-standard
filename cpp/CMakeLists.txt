@@ -1,4 +1,6 @@
 add_library(north_standard_verifier
+    src/json.cpp
+    src/wire.cpp
     src/verifier.cpp
     src/scenarios.cpp
 )
@@ -22,4 +24,8 @@ if(BUILD_TESTING)
     add_executable(north-standard-cpp-tests tests/verifier_tests.cpp)
     target_link_libraries(north-standard-cpp-tests PRIVATE north_standard_verifier)
     add_test(NAME north-standard-cpp-tests COMMAND north-standard-cpp-tests)
+
+    add_executable(north-standard-json-tests tests/json_tests.cpp)
+    target_link_libraries(north-standard-json-tests PRIVATE north_standard_verifier)
+    add_test(NAME north-standard-json-tests COMMAND north-standard-json-tests)
 endif()

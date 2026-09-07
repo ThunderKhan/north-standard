@@ -10,47 +10,65 @@ The current repository is deliberately **not** a GPU marketplace. The verifier a
 
 ## Current architecture
 
-North Standard now uses two verifier implementations with distinct roles:
+North Standard uses two verifier implementations with distinct roles:
 
-- **C++20 core** — settlement-critical claim appraisal and decision semantics;
-- **Python reference** — simulator, research orchestration, experiment tooling, and an executable semantic reference.
+- **C++20 core** — settlement-critical parsing, claim appraisal, hashing, and decision semantics;
+- **Python reference** — simulator, research orchestration, experiment tooling, and executable semantic reference.
 
-CI runs the same shared scenarios through both implementations and fails if their decision or reason codes diverge.
+The JSON Schemas are the language-neutral protocol boundary. CI now sends Python-generated wire objects through the C++ parser and requires parity for:
 
 ```text
-Compute contract
-      -> contract-bound evidence
-      -> C++ verifier core
-      -> ACCEPT | REJECT | INCONCLUSIVE
-
-                   ^
-                   |
-        differential parity
-                   |
-            Python reference
+contract hash
++ evidence bundle root
++ settlement commitment hash
++ ACCEPT / REJECT / INCONCLUSIVE
++ reason codes
 ```
 
-The JSON Schemas remain the language-neutral protocol boundary. The current C++ milestone mirrors the typed verifier semantics; canonical JSON/hash parity and signed settlement authorization are the next boundary-hardening step.
+```text
+Compute contract + evidence JSON
+             |
+             v
+      canonical bytes
+             |
+      +------+------+
+      |             |
+   Python         C++20
+ reference        core
+      |             |
+      +------v------+
+       exact parity
+             |
+             v
+ settlement commitment
+             |
+             v
+      Monad (next step)
+```
+
+See [`docs/CANONICALIZATION.md`](docs/CANONICALIZATION.md) for the NSCJ-0.1 hashing profile.
 
 ## Implemented
 
-- versioned compute-contract, evidence, and verifier-result schemas;
-- Python canonical serialization + SHA-256 commitments;
-- C++20 typed verifier core with no third-party runtime dependencies;
+- versioned compute-contract, evidence, verifier-result, and settlement-commitment schemas;
+- deterministic UTF-8 canonical JSON in Python and C++20;
+- cross-language SHA-256 parity;
+- C++ JSON parsing into typed contract/evidence structures;
+- preservation of unrecognized evidence payload fields;
 - contract/session binding checks;
 - runtime, availability, and performance claim appraisal;
 - explicit `INCONCLUSIVE` behavior for ambiguous/missing evidence;
 - replay and duplicate-evidence protection;
-- four synthetic judge-facing scenarios in both implementations;
+- compact `settlement-commitment/0.1` hash shared by Python and C++;
+- four synthetic judge-facing scenarios;
 - native C++ tests;
 - Python unit tests;
-- Python/C++ differential tests in CI.
+- cross-language differential tests in CI.
 
 Not implemented yet:
 
 - Monad settlement contract;
-- settlement authorization signing / verifier key management;
-- canonical JSON + hash parity in the C++ core;
+- settlement authorization signature / verifier key management;
 - NVIDIA/H100 attestation adapter;
 - C++/CUDA challenge runner;
 - recorded-real GPU traces;
@@ -119,7 +137,20 @@ Run a native scenario:
 ./build/cpp/north-standard-cpp simulate ambiguous_network_failure
 ```
 
-Expected high-level decisions:
+Canonicalize or hash arbitrary v0.1 JSON:
+
+```bash
+printf '{"b":2,"a":1.0}' | ./build/cpp/north-standard-cpp canonicalize-json
+printf '{"b":2,"a":1.0}' | ./build/cpp/north-standard-cpp hash-json
+```
+
+Verify shared wire JSON:
+
+```bash
+./build/cpp/north-standard-cpp verify-json < wire.json
+```
+
+Expected high-level scenario decisions:
 
 ```text
 healthy_service              -> ACCEPT
@@ -132,18 +163,19 @@ ambiguous_network_failure    -> INCONCLUSIVE
 
 ```text
 CMakeLists.txt              top-level native build
-cpp/                        C++20 verifier core + scenarios + tests
+cpp/                        C++20 parser/verifier/hash core + tests
 schemas/                    JSON wire-format schemas
+fixtures/                   shared cross-language parity vectors
 src/north_standard/         Python reference verifier + simulator
 tests/                      Python + cross-language differential tests
 examples/                   executable vertical-slice examples
-docs/                       architecture and research-facing docs
+docs/                       architecture and protocol notes
 contracts/                  reserved for Monad settlement milestone
 experiments/                reserved for adversarial evaluation harness
 app/                        reserved for the product console
 ```
 
-See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for the current design boundary.
+See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for the verifier boundary.
 
 ## Research honesty
 
