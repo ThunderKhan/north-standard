@@ -35,6 +35,11 @@ jobs:
           NORTH_STANDARD_CPP_CLI: build/cpp/north-standard-cpp
         run: python -m unittest discover -s tests -v
 
+      - name: Generate verifier-to-settlement fixtures
+        env:
+          NORTH_STANDARD_CPP_CLI: build/cpp/north-standard-cpp
+        run: python scripts/generate_settlement_fixture.py --require-cpp
+
       - uses: foundry-rs/foundry-toolchain@v1
         with:
           version: stable
