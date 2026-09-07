@@ -137,6 +137,23 @@ finally {
     Pop-Location
 }
 
+Write-Host "== Describing healthy-baseline variance =="
+$qualityPath = Join-Path $outputPath "rtx3050-baseline-quality.json"
+$qualityArgs = @("experiments/analyze_recorded_baseline.py") + $tracePaths + @(
+    "--calibration", $calibrationPath,
+    "--output", $qualityPath
+)
+Push-Location $repoRoot
+try {
+    & python @qualityArgs
+    if ($LASTEXITCODE -ne 0) {
+        throw "Recorded baseline-quality analysis failed"
+    }
+}
+finally {
+    Pop-Location
+}
+
 $reportPath = Join-Path $outputPath "mode-r-bootstrap-report.json"
 $report = [ordered]@{
     schema_version = "mode-r-bootstrap-report/0.1"
@@ -151,10 +168,12 @@ $report = [ordered]@{
     probe_path = $probePath
     trace_paths = $tracePaths
     calibration_path = $calibrationPath
+    baseline_quality_path = $qualityPath
     limitations = @(
         "This report records a local baseline workflow, not H100/H200/B200 evidence.",
         "The collector is LOCAL_SOFTWARE_ONLY and is not hardware-rooted attestation.",
-        "Healthy baseline capture alone is not a publication-ready evaluation."
+        "Healthy baseline capture alone is not a publication-ready evaluation.",
+        "The baseline-quality report is descriptive and does not impose a stability pass/fail threshold."
     )
 }
 $report | ConvertTo-Json -Depth 8 | Set-Content -Encoding UTF8 $reportPath
@@ -162,5 +181,6 @@ $report | ConvertTo-Json -Depth 8 | Set-Content -Encoding UTF8 $reportPath
 Write-Host ""
 Write-Host "Mode R healthy baseline complete."
 Write-Host "Calibration: $calibrationPath"
+Write-Host "Baseline quality: $qualityPath"
 Write-Host "Bootstrap report: $reportPath"
-Write-Host "Next: capture labelled evaluation conditions, merge fragments into a recorded campaign manifest, and run experiments/run_recorded_campaign.py."
+Write-Host "Next: inspect baseline variance before capturing labelled evaluation conditions."

@@ -17,6 +17,8 @@ north-standard-cuda-probe
    v
 healthy calibration captures
    |
+   +--> descriptive baseline-quality report
+   |
    v
 gpu-calibration/0.1
    | device/profile/challenge-bound
@@ -36,12 +38,7 @@ recorded campaign metrics
 FAR | FRR | IR + Wilson intervals
 ```
 
-The collector uses only the CUDA runtime in v0.1. It records two deliberately simple microbenchmark primitives:
-
-- repeated per-element FMA work, reported as estimated GFLOP/s;
-- a device-memory copy kernel, reported as GB/s.
-
-These are **research probes**, not a standardized GPU benchmark suite.
+The active collector uses benchmark profile `CUDA-MICROBENCH-v0.2`. Its compute probe uses four independent per-thread FMA dependency chains, while its memory probe uses a custom device copy kernel. The reported GFLOP/s and GB/s values are **research-probe measurements**, not standardized benchmark scores.
 
 ## Fast path on the RTX 3050 Windows machine
 
@@ -59,11 +56,31 @@ It performs only the following:
 2. builds `north-standard-cuda-probe` for CUDA architecture `86` (Ampere RTX 3050 target);
 3. captures at least five `healthy_idle` traces by default;
 4. builds the device/profile/challenge-bound healthy calibration;
-5. writes `mode-r-bootstrap-report.json` with toolchain/provenance metadata.
+5. writes `rtx3050-baseline-quality.json` with descriptive healthy-run variance;
+6. writes `mode-r-bootstrap-report.json` with toolchain/provenance metadata.
 
 It does **not** induce throttling, contention, thermal stress, power-limit changes, overclocking, undervolting, or any other degraded condition.
 
 If the bootstrap fails because `nvcc` is missing, the NVIDIA driver alone is not enough: a CUDA Toolkit that provides `nvcc` must be installed/configured.
+
+## Baseline-quality report
+
+Before any degraded-condition campaign, inspect `rtx3050-baseline-quality.json`. It reports, separately for compute GFLOP/s, memory GB/s, and measured challenge runtime:
+
+- minimum / p10 / median / p90 / maximum;
+- median absolute deviation (MAD);
+- relative MAD;
+- interdecile span and relative interdecile span;
+- each capture's median;
+- maximum and median run-to-run relative deviation from the median capture.
+
+The report intentionally has status:
+
+```text
+DESCRIPTIVE_ONLY_NO_STABILITY_THRESHOLD
+```
+
+There is no hard-coded "stable enough" cutoff. A future threshold must be justified from observed physical data and documented before using held-out evaluation results.
 
 ## Build the optional CUDA probe manually
 
@@ -189,7 +206,7 @@ recorded_trials.jsonl
 recorded_summary.json
 ```
 
-The summary reports FAR, FRR, overall/conditioned INCONCLUSIVE rates, and 95% Wilson confidence intervals. It remains explicitly `publication_ready: false` until the campaign is large enough, conditions are documented, and limitations are reviewed.
+The summary reports FAR, FRR, overall/conditioned INCONCLUSIVE rates, 95% Wilson confidence intervals, normalized score distributions, measured compute/memory observations, and measured per-challenge runtime. It remains explicitly `publication_ready: false` until the campaign is large enough, conditions are documented, and limitations are reviewed.
 
 ## Trust and provenance
 
