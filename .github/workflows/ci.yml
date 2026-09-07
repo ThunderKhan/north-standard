@@ -34,3 +34,10 @@ jobs:
         env:
           NORTH_STANDARD_CPP_CLI: build/cpp/north-standard-cpp
         run: python -m unittest discover -s tests -v
+
+      - uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: stable
+
+      - name: Run Solidity settlement tests
+        run: forge test -vvv

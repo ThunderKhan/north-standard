@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://north-standard.dev/schemas/mutual-resolution.schema.json",
+  "title": "North Standard Mutual Resolution v0.1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "agreement_id",
+    "buyer_amount",
+    "provider_amount",
+    "nonce",
+    "valid_until"
+  ],
+  "properties": {
+    "schema_version": {"const": "mutual-resolution/0.1"},
+    "agreement_id": {
+      "type": "string",
+      "pattern": "^0x[0-9a-fA-F]{64}$"
+    },
+    "buyer_amount": {"type": "integer", "minimum": 0},
+    "provider_amount": {"type": "integer", "minimum": 0},
+    "nonce": {"type": "integer", "minimum": 0},
+    "valid_until": {"type": "integer", "minimum": 0}
+  }
+}

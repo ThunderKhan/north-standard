@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://north-standard.dev/schemas/settlement-authorization.schema.json",
+  "title": "North Standard Settlement Authorization v0.1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "agreement_id",
+    "contract_hash",
+    "settlement_commitment",
+    "evidence_bundle_root",
+    "verifier_policy_hash",
+    "settlement_policy_hash",
+    "verifier_set_id",
+    "decision",
+    "issued_at",
+    "valid_until",
+    "nonce"
+  ],
+  "properties": {
+    "schema_version": {"const": "settlement-authorization/0.1"},
+    "agreement_id": {"$ref": "#/$defs/bytes32"},
+    "contract_hash": {"$ref": "#/$defs/bytes32"},
+    "settlement_commitment": {"$ref": "#/$defs/bytes32"},
+    "evidence_bundle_root": {"$ref": "#/$defs/bytes32"},
+    "verifier_policy_hash": {"$ref": "#/$defs/bytes32"},
+    "settlement_policy_hash": {"$ref": "#/$defs/bytes32"},
+    "verifier_set_id": {"$ref": "#/$defs/bytes32"},
+    "decision": {"enum": ["ACCEPT", "REJECT", "INCONCLUSIVE"]},
+    "issued_at": {"type": "integer", "minimum": 0},
+    "valid_until": {"type": "integer", "minimum": 0},
+    "nonce": {"type": "integer", "minimum": 0}
+  },
+  "$defs": {
+    "bytes32": {
+      "type": "string",
+      "pattern": "^0x[0-9a-fA-F]{64}$"
+    }
+  }
+}
