@@ -64,6 +64,15 @@ jobs:
             --heldout-trials-per-scenario 5 \
             --output-dir /tmp/north-standard-heldout
 
+      - name: Run challenge sensitivity smoke grid
+        run: |
+          python experiments/challenge_sensitivity.py \
+            --challenge-counts 2,6 \
+            --honesty-radii-seconds 2,5 \
+            --jitter-values-seconds 10,20 \
+            --trials-per-cell 6 \
+            --output-dir /tmp/north-standard-challenge-sensitivity
+
       - name: Generate verifier-to-settlement fixtures
         env:
           NORTH_STANDARD_CPP_CLI: build/cpp/north-standard-cpp
