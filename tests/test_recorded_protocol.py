@@ -44,10 +44,10 @@ def trace(
         "contract_id": contract_id,
         "session_id": session_id,
         "runtime_profile_id": "CUDA-RECORDED-v0.1",
-        "benchmark_profile_id": "CUDA-MICROBENCH-v0.1",
+        "benchmark_profile_id": "CUDA-MICROBENCH-v0.2",
         "collector": {
             "name": "north-standard-cuda-probe",
-            "version": "0.1",
+            "version": "0.2",
             "authentication": "LOCAL_SOFTWARE_ONLY",
         },
         "device": {
@@ -155,11 +155,22 @@ class RecordedProtocolTests(unittest.TestCase):
             rows = run_campaign(manifest, base_dir=root)
 
         self.assertEqual([row.decision for row in rows], [Decision.ACCEPT, Decision.REJECT])
+        self.assertEqual(rows[0].challenge_count, 3)
+        self.assertAlmostEqual(rows[0].median_normalized_score, 0.98)
+        self.assertAlmostEqual(rows[1].median_normalized_score, 0.50)
+        self.assertAlmostEqual(rows[0].median_challenge_runtime_ms, 2.0)
+        self.assertAlmostEqual(rows[0].total_challenge_runtime_ms, 6.0)
+
         summary = campaign_summary(rows)
         self.assertEqual(summary["far"]["numerator"], 0)
         self.assertEqual(summary["frr"]["numerator"], 0)
         self.assertGreater(summary["far"]["upper"], 0.0)
         self.assertGreater(summary["frr"]["upper"], 0.0)
+        self.assertEqual(summary["measurement"]["total_challenges"], 6)
+        self.assertAlmostEqual(
+            summary["per_condition"]["gpu_contention"]["measurement"]["median_trial_normalized_score"],
+            0.50,
+        )
         serialized = json.dumps([row.to_dict() for row in rows])
         self.assertIn("ground_truth", serialized)
         self.assertNotIn("ground_truth", json.dumps(healthy))
