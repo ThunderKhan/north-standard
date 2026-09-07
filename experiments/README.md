@@ -2,17 +2,16 @@
 
 This directory is the experimental control plane for North Standard's verifier research.
 
-## Current milestone: synthetic smoke harnesses
+## Current milestone: reproducible synthetic evaluation plumbing
 
-The current harnesses are intentionally **not benchmark results**. They prove that the repository can:
+The current harnesses are intentionally **not benchmark results**. They now support:
 
-1. generate seeded evidence without exposing ground truth to the verifier;
-2. retain explicit `COMPLIANT` / `BREACH` labels only in the experiment harness;
-3. run the same deterministic verifier used by the settlement path;
-4. persist per-trial raw records;
-5. calculate FAR, FRR, and INCONCLUSIVE rates with explicit denominators;
-6. compare the full verifier against explicit evidence-subset baselines and verifier ablations;
-7. model a challenge-aware cheating provider under predictable versus hidden challenge schedules.
+1. seeded evidence with hidden ground truth outside the verifier;
+2. FAR, FRR, and INCONCLUSIVE rates with explicit denominators;
+3. evidence-subset baselines and verifier ablations;
+4. challenge-aware cheating under predictable versus hidden schedules;
+5. disjoint calibration/held-out seed namespaces;
+6. 95% Wilson intervals so zero observed errors are never presented as zero uncertainty.
 
 ## General synthetic matrix
 
@@ -29,13 +28,22 @@ Current families:
 | `provider_outage` | BREACH | corroborated provider-side availability failure |
 | `telemetry_gap` | COMPLIANT | required-evidence missingness / abstention |
 
-Run:
-
 ```bash
-python -m pip install -e .
 python experiments/run_synthetic.py --trials-per-scenario 25 --base-seed 20260907
 python experiments/compare_evaluators.py --trials-per-scenario 25 --base-seed 20260907
 ```
+
+## Held-out protocol
+
+Calibration and held-out runs use separate deterministic seed namespaces. The current milestone generates calibration trials only to verify the split mechanics; it does **not** tune policy from them yet. Held-out summaries include 95% Wilson intervals.
+
+```bash
+python experiments/run_heldout.py \
+  --calibration-trials-per-scenario 50 \
+  --heldout-trials-per-scenario 200
+```
+
+A zero observed FAR therefore appears as `estimate: 0`, with a positive finite-sample upper confidence bound rather than being reported as proven zero risk.
 
 ## Implemented comparators
 
@@ -50,22 +58,16 @@ python experiments/compare_evaluators.py --trials-per-scenario 25 --base-seed 20
 | `ABLATION_NO_EXTERNAL_PROBE` | ablation | removes external probe evidence |
 | `ABLATION_NO_ABSTENTION` | ablation | converts `INCONCLUSIVE` to default `ACCEPT` |
 
-The B0/B3/B5 labels refer specifically to these implemented comparators. They do not imply the full production behavior of any external system.
-
 ## Challenge-aware cheating
 
-The adversary throttles most of the delivery window but restores an honest score inside a small window around challenge times it can predict.
-
-Schedules:
+The adversary throttles most of the delivery window but restores an honest score around challenge times it can predict.
 
 | Schedule | Attacker knowledge |
 | --- | --- |
 | `fixed_periodic` | exact periodic challenge times |
-| `public_jitter` | exact jittered times because the schedule/seed is public |
-| `hidden_jitter` | interval is known but jitter draw is hidden |
-| `hidden_uniform` | challenge times are drawn uniformly from a hidden seed |
-
-Run:
+| `public_jitter` | exact jittered times because schedule/seed is public |
+| `hidden_jitter` | interval known but jitter draw hidden |
+| `hidden_uniform` | challenge times drawn from a hidden seed |
 
 ```bash
 python experiments/challenge_aware.py \
@@ -74,9 +76,7 @@ python experiments/challenge_aware.py \
   --challenge-count 6
 ```
 
-The primary smoke metric here is **false-accept rate under known cheating**. `REJECT` is counted as detected; `INCONCLUSIVE` remains separate rather than being silently counted as success.
-
-Challenge count and density are scheduling proxies only. They are **not measured GPU overhead**. Actual challenge-runtime overhead will come from recorded-real hardware work later.
+Challenge count/density are scheduling proxies only, **not measured GPU overhead**.
 
 ## Metric definitions
 
@@ -88,11 +88,4 @@ IR  = INCONCLUSIVE trials / all trials
 
 ## Research honesty
 
-Any numbers produced by these smoke harnesses are **synthetic pipeline diagnostics**. They are not final evidence that North Standard detects real provider cheating. Before numbers become research/pitch claims we still need, at minimum:
-
-- a frozen held-out attack suite;
-- confidence intervals and exact sample counts;
-- sensitivity sweeps over challenge frequency and attacker honesty windows;
-- measured challenge runtime/overhead;
-- recorded-real RTX 3050 traces;
-- limitations and negative-result retention.
+Synthetic smoke and held-out numbers remain **pipeline diagnostics**, not evidence that North Standard detects real-world GPU cheating. Before publication/pitch claims we still need broader attack families, sensitivity analysis, measured challenge overhead, recorded-real RTX 3050 traces, limitations, and retained negative results.

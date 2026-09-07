@@ -57,6 +57,13 @@ jobs:
             --challenge-count 6 \
             --output-dir /tmp/north-standard-challenge-aware
 
+      - name: Run held-out protocol smoke check
+        run: |
+          python experiments/run_heldout.py \
+            --calibration-trials-per-scenario 2 \
+            --heldout-trials-per-scenario 5 \
+            --output-dir /tmp/north-standard-heldout
+
       - name: Generate verifier-to-settlement fixtures
         env:
           NORTH_STANDARD_CPP_CLI: build/cpp/north-standard-cpp
