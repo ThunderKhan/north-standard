@@ -43,22 +43,45 @@ The collector uses only the CUDA runtime in v0.1. It records two deliberately si
 
 These are **research probes**, not a standardized GPU benchmark suite.
 
-## Build the optional CUDA probe
+## Fast path on the RTX 3050 Windows machine
+
+After pulling the repository, activate the Python environment you want to use. If the local package is not installed yet, either run `python -m pip install -e .` first or pass `-InstallPythonPackage` below.
+
+Then the safe healthy-baseline bootstrap is:
+
+```powershell
+.\scripts\bootstrap_mode_r.ps1 -InstallPythonPackage
+```
+
+It performs only the following:
+
+1. verifies `nvidia-smi`, `nvcc`, CMake and Python are available;
+2. builds `north-standard-cuda-probe` for CUDA architecture `86` (Ampere RTX 3050 target);
+3. captures at least five `healthy_idle` traces by default;
+4. builds the device/profile/challenge-bound healthy calibration;
+5. writes `mode-r-bootstrap-report.json` with toolchain/provenance metadata.
+
+It does **not** induce throttling, contention, thermal stress, power-limit changes, overclocking, undervolting, or any other degraded condition.
+
+If the bootstrap fails because `nvcc` is missing, the NVIDIA driver alone is not enough: a CUDA Toolkit that provides `nvcc` must be installed/configured.
+
+## Build the optional CUDA probe manually
 
 The default project build remains CUDA-free so ordinary CI and non-GPU contributors are unaffected.
 
 ```bash
 cmake -S . -B build-cuda \
   -DNORTH_STANDARD_BUILD_CUDA_PROBE=ON \
-  -DBUILD_TESTING=OFF
+  -DBUILD_TESTING=OFF \
+  -DCMAKE_CUDA_ARCHITECTURES=86
 cmake --build build-cuda --parallel
 ```
 
 On Windows with a Visual Studio generator, the executable will normally appear under the selected configuration directory, for example `build-cuda/cuda/Release/north-standard-cuda-probe.exe` when building Release.
 
-If `nvcc` is not discoverable, install/configure a CUDA Toolkit first. Having an NVIDIA driver alone is not sufficient to compile the probe.
+A separate GitHub Actions workflow compiles the probe inside an NVIDIA CUDA 12.8.1 development image without a GPU. Passing that workflow proves compile compatibility only; runtime behavior still has to be measured on physical hardware.
 
-## Capture a healthy baseline
+## Capture a healthy baseline manually
 
 Start with multiple healthy captures instead of calibrating from one lucky run. Keep the benchmark parameters identical.
 
@@ -73,7 +96,7 @@ Single capture example:
   --output experiments/recorded_traces/healthy-01.json
 ```
 
-### Windows helper
+### Windows repeated-capture helper
 
 The repository includes `scripts/capture_recorded.ps1` so a condition can be captured repeatedly without manually creating IDs and filenames.
 
