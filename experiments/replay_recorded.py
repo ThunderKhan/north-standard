@@ -7,6 +7,7 @@ import argparse
 import json
 
 from north_standard.policy import VerifierPolicy
+from north_standard.recorded_protocol import validate_challenge_binding
 from north_standard.recorded_real import (
     build_recorded_bundle,
     build_recorded_contract,
@@ -27,6 +28,7 @@ def main() -> int:
 
     traces = load_traces(args.traces)
     calibration = load_json(args.calibration)
+    validate_challenge_binding(calibration, traces)
     contract = build_recorded_contract(
         traces,
         performance_min_score=args.performance_floor,
@@ -42,7 +44,7 @@ def main() -> int:
         "verifier_result": result.to_dict(),
         "limitations": [
             "The input is local software-recorded accessible-hardware evidence, not hardware attestation.",
-            "The normalized performance score is calibrated only to the supplied device/profile baseline.",
+            "The normalized performance score is calibrated only to the supplied device/profile baseline and exact challenge configuration.",
             "This result is not a claim about H100-class hardware or production SLA thresholds.",
         ],
     }

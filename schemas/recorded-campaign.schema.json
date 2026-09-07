@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://north-standard.dev/schemas/recorded-campaign/0.1",
+  "title": "North Standard Recorded Hardware Campaign v0.1",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "campaign_id",
+    "mode",
+    "calibration_path",
+    "performance_floor",
+    "trials"
+  ],
+  "properties": {
+    "schema_version": {"const": "recorded-campaign/0.1"},
+    "campaign_id": {"type": "string", "minLength": 1},
+    "mode": {"const": "RECORDED_REAL"},
+    "calibration_path": {"type": "string", "minLength": 1},
+    "performance_floor": {"type": "number", "minimum": 0},
+    "trials": {
+      "type": "array",
+      "minItems": 2,
+      "items": {
+        "type": "object",
+        "required": ["trial_id", "condition", "ground_truth", "trace_paths"],
+        "properties": {
+          "trial_id": {"type": "string", "minLength": 1},
+          "condition": {"type": "string", "minLength": 1},
+          "ground_truth": {"enum": ["COMPLIANT", "BREACH"]},
+          "trace_paths": {
+            "type": "array",
+            "minItems": 1,
+            "items": {"type": "string", "minLength": 1}
+          },
+          "notes": {"type": "array", "items": {"type": "string"}}
+        },
+        "additionalProperties": false
+      }
+    },
+    "notes": {"type": "array", "items": {"type": "string"}}
+  },
+  "additionalProperties": false
+}
