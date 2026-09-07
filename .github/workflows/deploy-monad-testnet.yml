@@ -1,0 +1,51 @@
+name: deploy-monad-testnet
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  EXPECTED_CHAIN_ID: "10143"
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: monad-testnet
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: stable
+
+      - name: Require deployment secrets
+        env:
+          RPC_URL: ${{ secrets.MONAD_TESTNET_RPC_URL }}
+          DEPLOYER_PRIVATE_KEY: ${{ secrets.MONAD_TESTNET_DEPLOYER_PRIVATE_KEY }}
+        run: |
+          test -n "$RPC_URL"
+          test -n "$DEPLOYER_PRIVATE_KEY"
+
+      - name: Guard Monad Testnet chain ID
+        env:
+          RPC_URL: ${{ secrets.MONAD_TESTNET_RPC_URL }}
+        run: |
+          actual="$(cast chain-id --rpc-url "$RPC_URL")"
+          test "$actual" = "$EXPECTED_CHAIN_ID"
+
+      - name: Deploy North Standard settlement
+        env:
+          MONAD_TESTNET_RPC_URL: ${{ secrets.MONAD_TESTNET_RPC_URL }}
+          DEPLOYER_PRIVATE_KEY: ${{ secrets.MONAD_TESTNET_DEPLOYER_PRIVATE_KEY }}
+        run: |
+          forge script contracts/script/DeployNorthStandardSettlement.s.sol:DeployNorthStandardSettlement \
+            --rpc-url "$MONAD_TESTNET_RPC_URL" \
+            --broadcast \
+            --slow
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: monad-testnet-deployment
+          path: broadcast/

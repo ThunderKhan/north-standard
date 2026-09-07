@@ -8,9 +8,14 @@ from pathlib import Path
 import subprocess
 import unittest
 
+from north_standard.authorization import build_settlement_authorization
 from north_standard.commitment import settlement_hash
 from north_standard.simulator import Scenario, simulate_scenario
 from north_standard.verifier import verify
+
+
+AGREEMENT_ID = "0x" + "11" * 32
+VERIFIER_SET_ID = "0x" + "22" * 32
 
 
 class CppDifferentialTests(unittest.TestCase):
@@ -68,6 +73,20 @@ class CppDifferentialTests(unittest.TestCase):
                 self.assertEqual(cpp_settlement_hash, settlement_hash(reference))
                 self.assertEqual(cpp_decision, reference.decision.value)
                 self.assertEqual(cpp_reasons, reference.reason_codes)
+
+                authorization = build_settlement_authorization(
+                    contract,
+                    reference,
+                    agreement_id=AGREEMENT_ID,
+                    verifier_set_id=VERIFIER_SET_ID,
+                    issued_at=1_800_000_601,
+                    valid_until=1_800_001_000,
+                    nonce=42,
+                )
+                self.assertEqual(authorization["contract_hash"], "0x" + cpp_contract_hash)
+                self.assertEqual(authorization["evidence_bundle_root"], "0x" + cpp_bundle_root)
+                self.assertEqual(authorization["settlement_commitment"], "0x" + cpp_settlement_hash)
+                self.assertEqual(authorization["decision"], cpp_decision)
 
 
 if __name__ == "__main__":
